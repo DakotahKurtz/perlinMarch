@@ -10,15 +10,15 @@ class NoiseDisplay {
         this.showGradient = showGradient;
 
         this.threshold = threshold;
-        this.cBelow = [1, 0, 0, 1];
-        this.cAbove = [0, 0, 1, 1];
+        this.cBelow = [101 / 255, 157 / 255, 247 / 255, 1];
+        this.cAbove = [250 / 255, 110 / 255, 100 / 255, 1];
 
         this.vertices = [];
-        let inc = displaySize / (this.numSamples[0] + 1);
+        let inc = displaySize / (this.numSamples[0] - 1);
 
         for (let i = 0; i < this.numSamples[0]; i++) {
             for (let j = 0; j < this.numSamples[1]; j++) {
-                this.vertices.push([(i + 1) * inc, (j + 1) * inc, 0]);
+                this.vertices.push([(i) * inc, (j) * inc, 0]);
             }
         }
         this.updateColor();
@@ -40,12 +40,14 @@ class NoiseDisplay {
     updateColor() {
         this.colors = []
         if (this.showGradient) {
-            this.colors = this.initThreshold();
-        } else {
             this.colors = this.colorGradient();
+
+        } else {
+            this.colors = this.initThreshold();
+
         }
         this.colors.push([0, 0, 0, 1])
-        this.colors.push([0, 0, 1, 1])
+        this.colors.push([0, 1, 1, 1])
         this.colors.push([0, 0, 1, 1])
 
         this.cBuff = loadBuffer(this.gl, flatten(this.colors), this.gl.STATIC_DRAW);
@@ -69,8 +71,9 @@ class NoiseDisplay {
         for (let i = 0; i < this.vertices.length; i++) {
             let mapped = this.map(this.vertices[i]);
             let sample = this.perlin.sample(mapped[0], mapped[1], mapped[2]);
-
-            let scaled = scaleVector(r, sample);
+            let shapedSample = (Math.min(sample, this.threshold) / this.threshold);
+            shapedSample = shapedSample * shapedSample * shapedSample;
+            let scaled = scaleVector(r, shapedSample);
             let c = addVectors(scaled, [this.cBelow[0], this.cBelow[1], this.cBelow[2]])
             colors.push([c[0], c[1], c[2], 1]);
         }
