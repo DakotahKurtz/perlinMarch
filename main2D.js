@@ -14,7 +14,7 @@ var angleInc = .05;
 var z = 0.1;
 var dim = 3;
 const perlin = new Perlin2D();
-var numberOfSamples = 50;
+var numberOfSamples = 100;
 var threshold = .55;
 var displayDimension = 3;
 
@@ -110,6 +110,7 @@ window.onload = () => {
     var cameraLocation = [0, 0, 12];
     var lookingAt = [0, 0, 0];
     var camera = new Camera(cameraLocation, lookingAt, [0, 1, 0]);
+    // camera.updatePosition([19 * cameraAtInc, 0, 0])
     var boundingNear = .3;
     var boundingFar = 100;
     var viewAngle = 30;
@@ -144,8 +145,8 @@ window.onload = () => {
         DrawableTypes["Sparse"].drawableObjects.push(
             DrawableObject(noiseDisplay, programDataSparse,
                 [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],),
-            DrawableObject(marchingSquares, programDataSparse,
-                [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT),],)
+            // DrawableObject(marchingSquares, programDataSparse,
+            //     [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT),],)
         )
 
         DrawableTypes["Sparse"].drawableObjects.forEach((drawableObject) => {
@@ -158,13 +159,13 @@ window.onload = () => {
 
 
         let sampleRange = [sampleSize, sampleSize, 0];
-        rOrigin[2] += .003;
+        rOrigin[2] += .002;
 
-        perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
-        let numSamples = [numberOfSamples, numberOfSamples, 1];
-        noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, false);
-        marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
-        // noiseDisplay.updateSamples(generateSamples(dim, z))
+        //perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
+        numSamples[0] = numberOfSamples
+        numSamples[1] = numberOfSamples
+        noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
+        //marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
 
         animID = requestAnimationFrame(render);
     }
@@ -247,14 +248,14 @@ window.onload = () => {
 
 
 
-                let sampleRange = [sampleSize, sampleSize, 0];
+                // let sampleRange = [sampleSize, sampleSize, 0];
 
-                perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
-                let numSamples = [numberOfSamples, numberOfSamples, 1];
-                noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
-                marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
+                // perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
+                // let numSamples = [numberOfSamples, numberOfSamples, 1];
+                // noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
+                // marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
 
-                console.log("Origin: " + rOrigin + " | sampleRange: " + sampleRange + " | thresh: " + threshold)
+                console.log("numSamples: " + numSamples + "Origin: " + rOrigin + " | sampleRange: " + sampleRange + " | thresh: " + threshold)
             }
 
             else if (pressedKeys["Shift"]) {
@@ -353,8 +354,7 @@ window.onload = () => {
             }
 
 
-            //startAnimation();
-            render();
+            startAnimation();
         });
     }
 }
