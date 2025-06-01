@@ -371,10 +371,19 @@ class MarchingCubes {
         for (let i = 0; i < this.vertices.length; i++) {
             colors.push(this.color)
         }
+
+        let normals = [];
+        for (let i = 0; i < this.vertices.length; i += 3) {
+            let n = calculateNormals(this.vertices[i], this.vertices[i + 2], this.vertices[i + 1]);
+            normals.push(normalize(n[0]), normalize(n[1]), normalize(n[2]))
+        }
+
         this.numVertices = this.vertices.length;
 
         this.vBuff = loadBuffer(this.gl, flatten(this.vertices), this.gl.STATIC_DRAW);
         this.cBuff = loadBuffer(this.gl, flatten(colors), this.gl.STATIC_DRAW);
+
+        this.nBuff = loadBuffer(this.gl, flatten(normals), this.gl.STATIC_DRAW)
 
     }
 
@@ -423,7 +432,7 @@ class MarchingCubes {
     }
 
     getBuffers() {
-        return [this.vBuff, this.cBuff];
+        return [this.vBuff, this.nBuff, this.cBuff];
     }
 
     draw(programInfo, bufferAttributes) {

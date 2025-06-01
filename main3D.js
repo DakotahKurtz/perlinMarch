@@ -23,6 +23,20 @@ var displayGrid = [displayDimension, displayDimension, displayDimension];
 var depthChangeInc = .1
 var noiseDisplay;
 var rOrigin = [0, 0, z];
+var lightPosition = vec4(.5, .5, 0, 1);
+
+var worldLight = lighting(
+    [.6, .6, .6, 1],
+    [.6, .6, .6, 1],
+    [.9, .9, .9, 1],
+)
+
+var cubeMaterials = materials(
+    lighting(
+        [.6, .6, .6, 1],
+        [.6, .6, .6, 1],
+        [.9, .9, .9, 1]),
+    15);
 
 
 var generateMap = (dO, dDim, rO, rDim) => {
@@ -57,10 +71,24 @@ window.onload = () => {
 
 
 
+    var programDataPhong = new ProgramData(gl, "vertex-shader-phong", "fragment-shader-phong",
+        ["vPosition", "vNormal", "a_color"],);
     var programDataSparse = new ProgramData(gl, "vertex-shader-sparse", "fragment-shader-sparse",
         ["vPosition", "a_color"],);
 
 
+
+    var phongUniforms = {
+        "modelView": 0,
+        "projection": 0,
+        "objectMatrix": flatten(identity()),
+        "ambientProduct": 0,
+        "diffuseProduct": 0,
+        "specularProduct": 0,
+        "lightPosition": 0,
+        "shininess": 0,
+        "eyePosition": 0,
+    }
 
     var sparseUniforms = {
         "modelView": 0,
@@ -81,12 +109,9 @@ window.onload = () => {
     }
 
     var DrawableTypes = {
+        "Phong": programUniformCorrespondence(programDataPhong, phongUniforms),
         "Sparse": programUniformCorrespondence(programDataSparse, sparseUniforms),
     }
-
-
-
-    //let samples = generateSamples(dim, z);
 
 
     let sampleRange = [sampleSize, sampleSize, sampleSize];
@@ -94,8 +119,7 @@ window.onload = () => {
     var perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, displayDimension], rOrigin, sampleRange);
     let numSamples = [numberOfSamples, numberOfSamples, numberOfSamples];
     // noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
-    let marchingCubes = new MarchingCubes(gl, perlin, perlinMap.map, numSamples, displayGrid, threshold);
-
+    let marchingCubes;
 
 
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -118,9 +142,10 @@ window.onload = () => {
     let pMatrix = perspective(viewAngle, aspect, boundingNear, boundingFar);
 
 
-    programDataSparse.use();
     sparseUniforms["modelView"] = flatten(mvMatrix);
     sparseUniforms["projection"] = flatten(pMatrix);
+    phongUniforms["modelView"] = flatten(mvMatrix);
+    phongUniforms["projection"] = flatten(pMatrix);
     manageControls();
 
     startAnimation();
@@ -133,12 +158,23 @@ window.onload = () => {
         animID = requestAnimationFrame(render);
     }
 
+    function setMaterials(uniformData, materials, worldLight) {
+        let ambientProduct = mult(materials.ambient, worldLight.ambient);
+        let diffuseProduct = mult(materials.diffuse, worldLight.diffuse);
+        let specularProduct = mult(materials.specular, worldLight.specular);
+        uniformData["ambientProduct"] = flatten(ambientProduct);
+        uniformData["diffuseProduct"] = flatten(diffuseProduct);
+        uniformData["specularProduct"] = flatten(specularProduct);
+        uniformData["shininess"] = materials.shininess;
+
+    }
+
 
     function render(now) {
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        sparseUniforms["modelView"] = flatten(camera.getViewMatrix());
+        // phongUniforms["modelView"] = flatten(camera.getViewMatrix());
 
         numSamples = [numberOfSamples, numberOfSamples, numberOfSamples]
         sampleRange = [sampleSize, sampleSize, sampleSize];
@@ -147,29 +183,36 @@ window.onload = () => {
         marchingCubes = new MarchingCubes(gl, perlin, perlinMap.map, numSamples, displayGrid, threshold);
 
 
-        DrawableTypes["Sparse"].drawableObjects.push(
-            DrawableObject(marchingCubes, programDataSparse,
-                [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],),
-            LookAtBox(camera),
-            // DrawableObject(noiseDisplay, programDataSparse,
-            //     [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],),
 
+
+        // DrawableTypes["Phong"].drawableObjects.push(
+        // DrawableObject(marchingCubes, programDataSparse,
+        //     [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)], cubeMaterials,),
+        // )
+
+        eye = camera.getPosition();
+        phongUniforms["eyePosition"] = flatten(eye);
+        phongUniforms["lightPosition"] = flatten(lightPosition);
+
+
+        DrawableTypes["Phong"].drawableObjects.push(
+            LookAtBox(camera),
+            DrawableObject(marchingCubes, programDataPhong,
+                [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
+                cubeMaterials,),
         )
 
-        DrawableTypes["Sparse"].drawableObjects.forEach((drawableObject) => {
-            setUniforms(sparseUniforms, programDataSparse);
+        phongUniforms["modelView"] = flatten(camera.getViewMatrix());
+
+        DrawableTypes["Phong"].drawableObjects.forEach((drawableObject) => {
+            programDataPhong.use();
+            setMaterials(phongUniforms, drawableObject.materials, worldLight)
+
+            setUniforms(phongUniforms, programDataPhong);
             drawableObject.draw();
         });
 
-        DrawableTypes["Sparse"].drawableObjects = [];
-
-
-
-        // rOrigin[2] += .002;
-        // numSamples[0] = numberOfSamples
-        // numSamples[1] = numberOfSamples
-
-        // noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
+        DrawableTypes["Phong"].drawableObjects = [];
 
         //animID = requestAnimationFrame(render);
     }
@@ -179,9 +222,9 @@ window.onload = () => {
     function LookAtBox(camera) {
         let size = .2;
         let position = camera.lookingAt;
-        return DrawableObject(new TransparentBox(gl, size, position), programDataSparse,
-            [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
-        );
+        return DrawableObject(new TransparentBox(gl, size, position), programDataPhong,
+            [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
+            cubeMaterials);
     }
 
     function manageControls() {
@@ -354,6 +397,8 @@ window.onload = () => {
             startAnimation();
         });
     }
+
+
 }
 
 
@@ -391,3 +436,4 @@ function adjustControlArray(event, array, inc) {
 
 
 }
+
