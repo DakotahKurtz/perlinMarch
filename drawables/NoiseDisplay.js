@@ -63,8 +63,6 @@ class NoiseDisplay {
     }
 
     colorGradient() {
-        console.log(this.vertices.length);
-
         let colors = [];
         let r = [this.cAbove[0] - this.cBelow[0], this.cAbove[1] - this.cBelow[1], this.cAbove[2] - this.cBelow[2]];
 

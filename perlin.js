@@ -35,20 +35,6 @@ class Perlin2D {
 
 
     generateSamples(startPos, deltaPos, samplesDim) {
-        // let samples = [];
-        // for (let x = startPos[0]; x < (startPos[0] + (deltaPos[0] * samplesDim[0])); x += deltaPos[0]) {
-        //     let layer = []
-        //     for (let y = startPos[1]; y < (startPos[1] + (deltaPos[1] * samplesDim[1])); y += deltaPos[1]) {
-        //         let c = [];
-        //         for (let z = startPos[2]; z < startPos[2] + (deltaPos[2] * samplesDim[2]); z += deltaPos[2]) {
-        //             let p = this._perlin(y, x, z);
-        //             c.push(p)
-        //         }
-
-        //         layer.push(c);
-        //     }
-        //     samples.push(layer)
-        // }
 
         let samples = [];
         for (let i = 0; i < samplesDim[0]; i++) {
