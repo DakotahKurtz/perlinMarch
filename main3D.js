@@ -14,15 +14,29 @@ var angleInc = .05;
 var z = 0.1;
 var dim = 3;
 const perlin = new Perlin2D();
-var numberOfSamples = 100;
-var threshold = .85;
-var displayDimension = 3;
+let sampleSize = 1;
+var numberOfSamples = 30;
+var threshold = .5;
+var displayDimension = 1;
+var displayGrid = [displayDimension, displayDimension, displayDimension];
 
 var depthChangeInc = .1
 var noiseDisplay;
-var marchingSquares;
-var sampleSize = 6;
 var rOrigin = [0, 0, z];
+var lightPosition = vec4(.5, .5, 0, 1);
+
+var worldLight = lighting(
+    [.6, .6, .6, 1],
+    [.6, .6, .6, 1],
+    [.9, .9, .9, 1],
+)
+
+var cubeMaterials = materials(
+    lighting(
+        [.6, .6, .6, 1],
+        [.6, .6, .6, 1],
+        [.9, .9, .9, 1]),
+    15);
 
 
 var generateMap = (dO, dDim, rO, rDim) => {
@@ -57,10 +71,24 @@ window.onload = () => {
 
 
 
+    var programDataPhong = new ProgramData(gl, "vertex-shader-phong", "fragment-shader-phong",
+        ["vPosition", "vNormal", "a_color"],);
     var programDataSparse = new ProgramData(gl, "vertex-shader-sparse", "fragment-shader-sparse",
         ["vPosition", "a_color"],);
 
 
+
+    var phongUniforms = {
+        "modelView": 0,
+        "projection": 0,
+        "objectMatrix": flatten(identity()),
+        "ambientProduct": 0,
+        "diffuseProduct": 0,
+        "specularProduct": 0,
+        "lightPosition": 0,
+        "shininess": 0,
+        "eyePosition": 0,
+    }
 
     var sparseUniforms = {
         "modelView": 0,
@@ -81,22 +109,17 @@ window.onload = () => {
     }
 
     var DrawableTypes = {
+        "Phong": programUniformCorrespondence(programDataPhong, phongUniforms),
         "Sparse": programUniformCorrespondence(programDataSparse, sparseUniforms),
     }
 
 
+    let sampleRange = [sampleSize, sampleSize, sampleSize];
 
-    //let samples = generateSamples(dim, z);
-
-
-    let sampleRange = [sampleSize, sampleSize, 0];
-
-    var perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
-    let numSamples = [numberOfSamples, numberOfSamples, 1];
-    noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
-    marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
-
-
+    var perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, displayDimension], rOrigin, sampleRange);
+    let numSamples = [numberOfSamples, numberOfSamples, numberOfSamples];
+    // noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
+    let marchingCubes;
 
 
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -107,10 +130,9 @@ window.onload = () => {
 
     var aspect = canvas.width / canvas.height;
 
-    var cameraLocation = [0, 0, 12];
-    var lookingAt = [0, 0, 0];
+    var cameraLocation = [.5, .5, 5];
+    var lookingAt = [.5, .5, 0];
     var camera = new Camera(cameraLocation, lookingAt, [0, 1, 0]);
-    // camera.updatePosition([19 * cameraAtInc, 0, 0])
     var boundingNear = .3;
     var boundingFar = 100;
     var viewAngle = 30;
@@ -120,9 +142,10 @@ window.onload = () => {
     let pMatrix = perspective(viewAngle, aspect, boundingNear, boundingFar);
 
 
-    programDataSparse.use();
     sparseUniforms["modelView"] = flatten(mvMatrix);
     sparseUniforms["projection"] = flatten(pMatrix);
+    phongUniforms["modelView"] = flatten(mvMatrix);
+    phongUniforms["projection"] = flatten(pMatrix);
     manageControls();
 
     startAnimation();
@@ -136,38 +159,44 @@ window.onload = () => {
     }
 
 
+
+
     function render(now) {
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        sparseUniforms["modelView"] = flatten(camera.getViewMatrix());
+        numSamples = [numberOfSamples, numberOfSamples, numberOfSamples]
+        sampleRange = [sampleSize, sampleSize, sampleSize];
+        perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, displayDimension], rOrigin, sampleRange);
 
-        DrawableTypes["Sparse"].drawableObjects.push(
-            // DrawableObject(noiseDisplay, programDataSparse,
-            //     [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],),
-            DrawableObject(marchingSquares, programDataSparse,
-                [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT),],)
+        marchingCubes = new MarchingCubes(gl, perlin, perlinMap.map, numSamples, displayGrid, threshold);
+
+
+
+
+
+        DrawableTypes["Phong"].drawableObjects.push(
+            LookAtBox(camera),
+            DrawableObject(marchingCubes, programDataPhong,
+                [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
+                cubeMaterials,),
         )
 
-        DrawableTypes["Sparse"].drawableObjects.forEach((drawableObject) => {
-            setUniforms(sparseUniforms, programDataSparse);
+        phongUniforms["eyePosition"] = flatten(camera.getPosition());
+        phongUniforms["lightPosition"] = flatten(lightPosition);
+        phongUniforms["modelView"] = flatten(camera.getViewMatrix());
+
+        DrawableTypes["Phong"].drawableObjects.forEach((drawableObject) => {
+            programDataPhong.use();
+            setMaterials(phongUniforms, drawableObject.materials, worldLight)
+
+            setUniforms(phongUniforms, programDataPhong);
             drawableObject.draw();
         });
 
-        DrawableTypes["Sparse"].drawableObjects = [];
+        DrawableTypes["Phong"].drawableObjects = [];
 
-
-
-        let sampleRange = [sampleSize, sampleSize, 0];
-        rOrigin[2] += .01;
-
-        perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
-        numSamples[0] = numberOfSamples
-        numSamples[1] = numberOfSamples
-        // noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
-        marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
-
-        animID = requestAnimationFrame(render);
+        //animID = requestAnimationFrame(render);
     }
 
 
@@ -175,9 +204,9 @@ window.onload = () => {
     function LookAtBox(camera) {
         let size = .2;
         let position = camera.lookingAt;
-        return DrawableObject(new TransparentBox(gl, size, position), programDataSparse,
-            [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
-        );
+        return DrawableObject(new TransparentBox(gl, size, position), programDataPhong,
+            [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
+            cubeMaterials);
     }
 
     function manageControls() {
@@ -196,7 +225,9 @@ window.onload = () => {
         document.addEventListener('keydown', function (event) {
 
 
-
+            if (event.key == '9') {
+                console.log(camera.getLog())
+            }
 
 
             if (event.key == '0') {
@@ -245,15 +276,6 @@ window.onload = () => {
 
 
                 }
-
-
-
-                let sampleRange = [sampleSize, sampleSize, 0];
-
-                // perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
-                // let numSamples = [numberOfSamples, numberOfSamples, 1];
-                // noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
-                // marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
 
                 console.log("numSamples: " + numSamples + "Origin: " + rOrigin + " | sampleRange: " + sampleRange + " | thresh: " + threshold)
             }
@@ -357,12 +379,25 @@ window.onload = () => {
             startAnimation();
         });
     }
+
+
+
+
 }
 
 
 
 
+function setMaterials(uniformData, materials, worldLight) {
+    let ambientProduct = mult(materials.ambient, worldLight.ambient);
+    let diffuseProduct = mult(materials.diffuse, worldLight.diffuse);
+    let specularProduct = mult(materials.specular, worldLight.specular);
+    uniformData["ambientProduct"] = flatten(ambientProduct);
+    uniformData["diffuseProduct"] = flatten(diffuseProduct);
+    uniformData["specularProduct"] = flatten(specularProduct);
+    uniformData["shininess"] = materials.shininess;
 
+}
 
 
 
@@ -394,3 +429,4 @@ function adjustControlArray(event, array, inc) {
 
 
 }
+

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+
+
+
+<html>
+<style type="text/css">
+    canvas {
+        background: blue;
+    }
+</style>
+
+
+
+<script type="text/javascript" src="../sharedUtils/webgl-utils/webgl-help.js"></script>
+<script type="text/javascript" src="../sharedUtils/webgl-utils/MV.js"></script>
+
+<script type="text/javascript" src="../sharedUtils/webgl-utils/ProgramData.js"></script>
+<script src="../sharedUtils/webgl-utils/webgl-utils.js"></script>
+<script src="../sharedUtils/utils.js"></script>
+<script src="../sharedUtils/Camera.js"></script>
+<script src="../sharedUtils/sharedDrawables/TransparentBox.js"></script>
+
+<script src="perlin.js"></script>
+<script src="drawables/NoiseDisplay.js"></script>
+<script src="MarchingCubes.js"></script>
+<script type="text/javascript" src="main3D.js"></script>
+
+<body>
+    <canvas id="gl-canvas" width="800" height="800">
+        Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+
+
+
+
+</body>
+
+</html>
+
+
+
+
+
+<script id="vertex-shader-sparse" type="x-shader/x-vertex">
+
+    attribute vec4 vPosition;
+    attribute vec4 a_color;
+    
+    varying vec4 fColor;
+    
+    uniform mat4 objectMatrix;
+    uniform mat4 modelView;
+    uniform mat4 projection;
+
+    void
+    main()
+    {
+        gl_PointSize = 4.0;
+
+        gl_Position = projection * modelView * objectMatrix * vPosition;
+            
+        fColor = a_color;
+    }
+        </script>
+
+<script id="fragment-shader-sparse" type="x-shader/x-fragment">
+
+    precision mediump float;
+
+    varying vec4 fColor;
+    void
+    main()
+    {
+    
+        gl_FragColor = fColor;
+    
+    }
+</script>
+
+<script id="vertex-shader-phong" type="x-shader/x-vertex">
+
+    attribute vec4 vPosition;
+    attribute vec4 vNormal;
+    attribute vec4 a_color;
+    
+    varying vec4 fColor;
+    varying vec3 light;
+    
+    uniform vec4 ambientProduct, diffuseProduct, specularProduct;
+    uniform mat4 objectMatrix;
+    uniform mat4 modelView;
+    uniform mat4 projection;
+    uniform vec4 lightPosition;
+    uniform float shininess;
+    uniform vec3 eyePosition;
+    
+    
+    void
+    main()
+    {
+        vec3 L;
+        if(lightPosition.w == 0.0)  L = normalize( lightPosition.xyz);
+        else  L = normalize( (lightPosition - vPosition) .xyz);
+    
+        vec4 adjustNormals = objectMatrix * normalize(vNormal);
+
+        vec3 E = normalize( eyePosition);
+        
+        vec3 H = normalize( L + E );
+    
+        
+        // Transform vertex normal into eye coordinates
+        
+        vec3 N = normalize(adjustNormals.xyz);
+    
+        // Compute terms in the illumination equation
+        vec4 ambient = ambientProduct;
+    
+        float Kd = max( dot(L, N), 0.0 );
+        vec4  diffuse = Kd*diffuseProduct;
+    
+        float Ks = pow( max(dot(N, H), 0.0), shininess );
+        vec4  specular = Ks * specularProduct;
+        
+        if( dot(L, N) < 0.0 ) {
+        specular = vec4(0.0, 0.0, 0.0, 1.0);
+        } 
+    
+        gl_Position = projection * modelView * objectMatrix * vPosition;
+        
+        light = (ambient + diffuse +specular).xyz;
+    
+        fColor = a_color;
+    }
+        </script>
+
+<script id="fragment-shader-phong" type="x-shader/x-fragment">
+
+    precision mediump float;
+
+    varying vec4 fColor;
+    varying vec3 light;
+    void
+    main()
+    {
+    
+        gl_FragColor = fColor;
+        gl_FragColor.rgb *= light;
+    
+    }
+        </script>

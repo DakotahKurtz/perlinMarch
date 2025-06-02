@@ -52,21 +52,11 @@ class MarchingSquares {
             vertices.push([flatVertices[i][0], flatVertices[i][1], 0])
         }
 
-        let color = [1, 0, 0, 1];
+        let color = [250 / 255, 90 / 255, 100 / 255, 1];
         let colors = [];
-        let lowColor = [1, 1, 1, 1];
-        let highColor = [1, 0, 0, 1];
-        let r = [highColor[0] - lowColor[0], highColor[1] - lowColor[1], highColor[2] - lowColor[2]];
 
         for (let i = 0; i < vertices.length; i++) {
             colors.push(color)
-            // let mapped = this.map([vertices[i][0], vertices[i][1], vertices[i][2]])
-
-            // let sample = this.noiseFunction.sample(mapped[0], mapped[1], mapped[2]);
-            // console.log(sample);
-            // let scaled = scaleVector(r, sample);
-            // let c = addVectors(scaled, [lowColor[0], lowColor[1], lowColor[2]])
-            // colors.push([c[0], c[1], c[2], 1]);
         }
 
         this.numVertices = vertices.length;
