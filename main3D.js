@@ -158,23 +158,12 @@ window.onload = () => {
         animID = requestAnimationFrame(render);
     }
 
-    function setMaterials(uniformData, materials, worldLight) {
-        let ambientProduct = mult(materials.ambient, worldLight.ambient);
-        let diffuseProduct = mult(materials.diffuse, worldLight.diffuse);
-        let specularProduct = mult(materials.specular, worldLight.specular);
-        uniformData["ambientProduct"] = flatten(ambientProduct);
-        uniformData["diffuseProduct"] = flatten(diffuseProduct);
-        uniformData["specularProduct"] = flatten(specularProduct);
-        uniformData["shininess"] = materials.shininess;
 
-    }
 
 
     function render(now) {
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        // phongUniforms["modelView"] = flatten(camera.getViewMatrix());
 
         numSamples = [numberOfSamples, numberOfSamples, numberOfSamples]
         sampleRange = [sampleSize, sampleSize, sampleSize];
@@ -185,15 +174,6 @@ window.onload = () => {
 
 
 
-        // DrawableTypes["Phong"].drawableObjects.push(
-        // DrawableObject(marchingCubes, programDataSparse,
-        //     [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)], cubeMaterials,),
-        // )
-
-        eye = camera.getPosition();
-        phongUniforms["eyePosition"] = flatten(eye);
-        phongUniforms["lightPosition"] = flatten(lightPosition);
-
 
         DrawableTypes["Phong"].drawableObjects.push(
             LookAtBox(camera),
@@ -202,6 +182,8 @@ window.onload = () => {
                 cubeMaterials,),
         )
 
+        phongUniforms["eyePosition"] = flatten(camera.getPosition());
+        phongUniforms["lightPosition"] = flatten(lightPosition);
         phongUniforms["modelView"] = flatten(camera.getViewMatrix());
 
         DrawableTypes["Phong"].drawableObjects.forEach((drawableObject) => {
@@ -399,12 +381,23 @@ window.onload = () => {
     }
 
 
+
+
 }
 
 
 
 
+function setMaterials(uniformData, materials, worldLight) {
+    let ambientProduct = mult(materials.ambient, worldLight.ambient);
+    let diffuseProduct = mult(materials.diffuse, worldLight.diffuse);
+    let specularProduct = mult(materials.specular, worldLight.specular);
+    uniformData["ambientProduct"] = flatten(ambientProduct);
+    uniformData["diffuseProduct"] = flatten(diffuseProduct);
+    uniformData["specularProduct"] = flatten(specularProduct);
+    uniformData["shininess"] = materials.shininess;
 
+}
 
 
 

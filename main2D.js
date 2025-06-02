@@ -15,7 +15,7 @@ var z = 0.1;
 var dim = 3;
 const perlin = new Perlin2D();
 var numberOfSamples = 100;
-var threshold = .55;
+var threshold = .85;
 var displayDimension = 3;
 
 var depthChangeInc = .1
@@ -143,10 +143,10 @@ window.onload = () => {
         sparseUniforms["modelView"] = flatten(camera.getViewMatrix());
 
         DrawableTypes["Sparse"].drawableObjects.push(
-            DrawableObject(noiseDisplay, programDataSparse,
-                [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],),
-            // DrawableObject(marchingSquares, programDataSparse,
-            //     [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT),],)
+            // DrawableObject(noiseDisplay, programDataSparse,
+            //     [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],),
+            DrawableObject(marchingSquares, programDataSparse,
+                [bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT),],)
         )
 
         DrawableTypes["Sparse"].drawableObjects.forEach((drawableObject) => {
@@ -159,13 +159,13 @@ window.onload = () => {
 
 
         let sampleRange = [sampleSize, sampleSize, 0];
-        rOrigin[2] += .002;
+        rOrigin[2] += .01;
 
-        //perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
+        perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
         numSamples[0] = numberOfSamples
         numSamples[1] = numberOfSamples
-        noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
-        //marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
+        // noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
+        marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
 
         animID = requestAnimationFrame(render);
     }
@@ -248,7 +248,7 @@ window.onload = () => {
 
 
 
-                // let sampleRange = [sampleSize, sampleSize, 0];
+                let sampleRange = [sampleSize, sampleSize, 0];
 
                 // perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
                 // let numSamples = [numberOfSamples, numberOfSamples, 1];
