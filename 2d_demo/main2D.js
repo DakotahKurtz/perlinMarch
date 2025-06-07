@@ -24,6 +24,13 @@ var marchingSquares;
 var sampleSize = 6;
 var rOrigin = [0, 0, z];
 
+var cameraLocation = [0, 0, 12];
+var lookingAt = [0, 0, 0];
+var camera = new Camera(cameraLocation, lookingAt, [0, 1, 0]);
+// camera.updatePosition([19 * cameraAtInc, 0, 0])
+var boundingNear = .3;
+var boundingFar = 100;
+var viewAngle = 30;
 
 var generateMap = (dO, dDim, rO, rDim) => {
     if (dDim[2] == 0) {
@@ -55,6 +62,14 @@ window.onload = () => {
     var gl = WebGLUtils.setupWebGL(canvas);
     if (!gl) { alert("WebGL isn't available"); }
 
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    var aspect = canvas.width / canvas.height;
+
 
 
     var programDataSparse = new ProgramData(gl, "vertex-shader-sparse", "fragment-shader-sparse",
@@ -84,39 +99,15 @@ window.onload = () => {
         "Sparse": programUniformCorrespondence(programDataSparse, sparseUniforms),
     }
 
-
-
-    //let samples = generateSamples(dim, z);
-
-
     let sampleRange = [sampleSize, sampleSize, 0];
 
     var perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
     let numSamples = [numberOfSamples, numberOfSamples, 1];
+
     noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
     marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
 
-
-
-
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(1.0, 1.0, 1.0, 1.0);
-    gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.BLEND)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-    var aspect = canvas.width / canvas.height;
-
-    var cameraLocation = [0, 0, 12];
-    var lookingAt = [0, 0, 0];
-    var camera = new Camera(cameraLocation, lookingAt, [0, 1, 0]);
-    // camera.updatePosition([19 * cameraAtInc, 0, 0])
-    var boundingNear = .3;
-    var boundingFar = 100;
-    var viewAngle = 30;
     let mvMatrix = camera.getViewMatrix();
-    let eye = camera.getPosition();
-
     let pMatrix = perspective(viewAngle, aspect, boundingNear, boundingFar);
 
 
@@ -191,13 +182,7 @@ window.onload = () => {
             delete pressedKeys[event.key];
         });
 
-
-
         document.addEventListener('keydown', function (event) {
-
-
-
-
 
             if (event.key == '0') {
                 camera.setLocked(!camera.isLocked());
