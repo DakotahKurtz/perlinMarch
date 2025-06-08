@@ -14,24 +14,16 @@ var angleInc = .05;
 var z = 0.1;
 
 const perlin = new Perlin2D();
-const SAMPLES_PER_UNIT = 100;
-const RANGE = 1;
 
-var displayDimension = 3;
-var startingDomainSize = displayDimension * RANGE;
-var numberOfSamples = displayDimension * SAMPLES_PER_UNIT;
 
-var threshold = .5;
-var displayGrid = [displayDimension, displayDimension, displayDimension];
-var startingOctaves = 3;
 
 var depthChangeInc = .1
 var noiseDisplay;
 var rOrigin = [0, 0, z];
 var lightPosition = vec4(.5, 5, 0, 1);
 
-var cameraLocation = [-2, 1, 2];
-var lookingAt = [-.5, 1, 1];
+var cameraLocation = [2.988555422108064, 3.708300028796068, 6.670047219235126];
+var lookingAt = [0.7323265782510022, -1.5307422384485543, -1.5718020427935802];
 var camera = new Camera(cameraLocation, lookingAt, [0, 1, 0]);
 var boundingNear = .3;
 var boundingFar = 100;
@@ -52,28 +44,7 @@ var cubeMaterials = materials(
 
 
 
-function generateMap(dO, dDim, rO, rDim) {
-    if (dDim[2] == 0) {
-        dDim[2] = 1;
-    }
-    var scaleX = rDim[0] / dDim[0];
-    var scaleY = rDim[1] / dDim[1];
-    var scaleZ = rDim[2] / dDim[2];
 
-    return {
-        map: (arr) => {
-            let tX = arr[0] - dO[0];
-            let tY = arr[1] - dO[1];
-            let tZ = arr[2] - dO[2];
-
-            let sX = tX * scaleX;
-            let sY = tY * scaleY;
-            let sZ = tZ * scaleZ;
-
-            return [sX + rO[0], sY + rO[1], sZ + rO[2]];
-        }
-    }
-}
 
 window.onload = () => {
     var canvas = document.getElementById("gl-canvas");
@@ -131,8 +102,14 @@ window.onload = () => {
     }
 
 
+    var gridManager = new GridManager(gl, 1);
+    let meshes = gridManager.getVisibleMeshes();
 
-
+    for (let i = 0; i < meshes.length; i++) {
+        DrawableTypes["Phong"].drawableObjects.push(DrawableObject(meshes[i], programDataPhong,
+            [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
+            cubeMaterials))
+    }
 
 
 
@@ -167,58 +144,14 @@ window.onload = () => {
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        phongUniforms["eyePosition"] = flatten(camera.getPosition());
+        phongUniforms["lightPosition"] = flatten(lightPosition);
+        phongUniforms["modelView"] = flatten(camera.getViewMatrix());
+        programDataPhong.use();
 
 
-        let gridDomainArray;
-        var perlinMap;
-        let numSamples = [numberOfSamples, numberOfSamples, 1];
 
-        let xInc = displayGrid[0] / (numSamples[0] - 1);
-        let zInc = displayGrid[1] / (numSamples[1] - 1);
 
-        let vertices = [];
-
-        for (let i = 0; i < numSamples[0]; i++) {
-            let r = [];
-            for (let j = 0; j < numSamples[1]; j++) {
-                let x = xInc * j;
-                let z = zInc * i;
-
-                r.push([x, 0, z])
-            }
-            vertices.push(r);
-        }
-
-        let totalDomain = [startingDomainSize, startingDomainSize, startingDomainSize];
-        let sFreq = 1;
-        let sAmp = 1;
-
-        for (let currOctave = 0; currOctave < startingOctaves; currOctave++) {
-            let portion = 1 / (Math.pow(2, startingOctaves - currOctave - 1))
-            gridDomainArray = [totalDomain[0] * portion, totalDomain[1] * portion, totalDomain[2] * portion];
-            perlinMap = generateMap([0, 0, 0], displayGrid, rOrigin, gridDomainArray);
-
-            for (let i = 0; i < numSamples[0]; i++) {
-                for (let j = 0; j < numSamples[1]; j++) {
-                    let x = vertices[i][j][0];
-                    let z = vertices[i][j][2];
-
-                    let mapped = perlinMap.map([x, z, .1]);
-                    let v = sAmp * perlin.sample(mapped[0], mapped[1], mapped[2]);
-                    vertices[i][j][1] += v;
-                }
-            }
-            sAmp *= .5;
-        }
-
-        let mesh = new TerrainMesh(gl, vertices);
-
-        DrawableTypes["Phong"].drawableObjects.push(
-            DrawableObject(mesh, programDataPhong,
-                [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
-                cubeMaterials
-            )
-        )
 
 
 
@@ -226,10 +159,7 @@ window.onload = () => {
             LookAtBox(camera),
         )
 
-        phongUniforms["eyePosition"] = flatten(camera.getPosition());
-        phongUniforms["lightPosition"] = flatten(lightPosition);
-        phongUniforms["modelView"] = flatten(camera.getViewMatrix());
-        programDataPhong.use();
+
 
         DrawableTypes["Phong"].drawableObjects.forEach((drawableObject) => {
             setMaterials(phongUniforms, drawableObject.materials, worldLight)
@@ -238,7 +168,7 @@ window.onload = () => {
             drawableObject.draw();
         });
 
-        DrawableTypes["Phong"].drawableObjects = []
+        DrawableTypes["Phong"].drawableObjects.pop()
 
         //animID = requestAnimationFrame(render);
     }
@@ -281,58 +211,13 @@ window.onload = () => {
             var tInc = .01;
 
             if (pressedKeys["t"]) {
-                switch (event.key) {
-                    case ("ArrowLeft"):
-                        threshold -= .01;
-                        break;
-                    case ("ArrowRight"):
-                        threshold += .01;
-                        break;
-                    case ("ArrowUp"):
-                        numberOfSamples += 1;
-                        break;
-                    case ("ArrowDown"):
-                        numberOfSamples -= 1;
-                        break;
-                    case ("i"):
-                        gridDomainDim -= .01;
-                        break;
-                    case ("o"):
-                        gridDomainDim += .01;
-                        break;
-                    case ("w"):
-                        rOrigin[1] += tInc;
-                        break;
-                    case ("a"):
-                        rOrigin[0] -= tInc;
-                        break;
-                    case ("s"):
-                        rOrigin[1] -= tInc;
-                        break;
-                    case ("d"):
-                        rOrigin[0] += tInc;
-                        break;
-                    case ("1"):
-                        rOrigin[2] += tInc;
-                        break;
-                    case ("2"):
-                        rOrigin[2] -= tInc;
-                        break;
-                    case ("3"):
-                        startingOctaves++;
-                        startingDomainSize *= 2;
-                        break;
-                    case ("4"):
-                        startingOctaves--;
-                        startingDomainSize *= .5;
-                        break;
 
 
-                }
-
-                // console.log("numSamples: " + numberOfSamples + "Origin: " + rOrigin + " | sampleRange: " + gridDomainArray + " | thresh: " + threshold)
-                console.log("octaves: " + startingOctaves)
+                return;
             }
+
+            // console.log("numSamples: " + numberOfSamples + "Origin: " + rOrigin + " | sampleRange: " + gridDomainArray + " | thresh: " + threshold)
+
 
             else if (pressedKeys["Shift"]) {
                 //adjustControlArray(event, lookingAt, lookInc);
