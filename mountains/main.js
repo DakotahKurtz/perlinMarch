@@ -20,7 +20,7 @@ const perlin = new Perlin2D();
 var depthChangeInc = .1
 var noiseDisplay;
 var rOrigin = [0, 0, z];
-var lightPosition = vec4(.5, 5, 0, 1);
+var lightPosition = vec4(.5, 10, 0, 1);
 
 var cameraLocation = [2.988555422108064, 3.708300028796068, 6.670047219235126];
 var lookingAt = [0.7323265782510022, -1.5307422384485543, -1.5718020427935802];
@@ -30,7 +30,7 @@ var boundingFar = 100;
 var viewAngle = 30;
 
 var worldLight = lighting(
-    [.6, .6, .6, 1],
+    [.9, .9, .9, 1],
     [.6, .6, .6, 1],
     [.9, .9, .9, 1],
 )
@@ -39,7 +39,7 @@ var cubeMaterials = materials(
     lighting(
         [.6, .6, .6, 1],
         [.6, .6, .6, 1],
-        [.9, .9, .9, 1]),
+        [.3, .3, .3, 1]),
     15);
 
 
@@ -103,13 +103,7 @@ window.onload = () => {
 
 
     var gridManager = new GridManager(gl, 1);
-    let meshes = gridManager.getVisibleMeshes();
 
-    for (let i = 0; i < meshes.length; i++) {
-        DrawableTypes["Phong"].drawableObjects.push(DrawableObject(meshes[i], programDataPhong,
-            [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
-            cubeMaterials))
-    }
 
 
 
@@ -151,7 +145,13 @@ window.onload = () => {
 
 
 
+        let meshes = gridManager.getVisibleMeshes(camera.getPosition(), camera.getLookingAt(), viewAngle);
 
+        for (let i = 0; i < meshes.length; i++) {
+            DrawableTypes["Phong"].drawableObjects.push(DrawableObject(meshes[i], programDataPhong,
+                [bufferAttributes(3, gl.FLOAT), bufferAttributes(3, gl.FLOAT), bufferAttributes(4, gl.FLOAT)],
+                cubeMaterials))
+        }
 
 
 
@@ -168,7 +168,7 @@ window.onload = () => {
             drawableObject.draw();
         });
 
-        DrawableTypes["Phong"].drawableObjects.pop()
+        DrawableTypes["Phong"].drawableObjects = [];
 
         //animID = requestAnimationFrame(render);
     }

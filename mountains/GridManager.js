@@ -1,6 +1,7 @@
-const SAMPLES_PER_UNIT = 20;
-const RANGE_PER_UNIT = 1;
+const SAMPLES_PER_UNIT = 30;
+const RANGE_PER_UNIT = 2;
 const BLOCK_DISPLAY_SIZE = 1;
+const RENDER_DISTANCE = 5;
 
 class GridManager {
 
@@ -8,42 +9,46 @@ class GridManager {
     constructor(gl, numOctaves) {
         this.gl = gl;
         this.terrainMeshes = [];
+        let arr = new Array();
+        arr[0] = 4;
+        console.log(arr[0]);
+        arr[-1] = 3;
+        console.log(arr[-1])
 
-        numOctaves = 2;
+        numOctaves = 4;
 
         this.numberOfSamples = [SAMPLES_PER_UNIT * BLOCK_DISPLAY_SIZE, 1, SAMPLES_PER_UNIT * BLOCK_DISPLAY_SIZE];
-        let domainSize = BLOCK_DISPLAY_SIZE * RANGE_PER_UNIT;
-        this.blockDomainSize = [domainSize, 1, domainSize];
+        this.domainBlockDim = BLOCK_DISPLAY_SIZE * RANGE_PER_UNIT;
+        this.domainBlockSizeArr = [this.domainBlockDim, 1, this.domainBlockDim];
         this.blockDisplayDims = [BLOCK_DISPLAY_SIZE, 0, BLOCK_DISPLAY_SIZE];
         this.xInc = this.blockDisplayDims[0] / (this.numberOfSamples[0] - 1);
         this.zInc = this.blockDisplayDims[2] / (this.numberOfSamples[2] - 1);
         this.numOctaves = numOctaves;
 
-        for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 3; j++) {
-                let dX = j * domainSize;
-                let dZ = i * domainSize;
-                let rX = j * BLOCK_DISPLAY_SIZE;
-                let rZ = i * BLOCK_DISPLAY_SIZE;
+        // for (let i = 0; i < 30; i++) {
+        //     for (let j = 0; j < 30; j++) {
+        //         // let dX = j * this.domainBlockSize;
+        //         // let dZ = i * this.domainBlockSize;
+        //         let rX = j * BLOCK_DISPLAY_SIZE;
+        //         let rZ = i * BLOCK_DISPLAY_SIZE;
 
-                let display = [rX, 0, rZ];
-                let perlinSpace = [dX, 0, dZ]
-                // console.log("\n\n****************\n\n" + i + ", " + j)
-                // console.log("Display: " + display);
-                // console.log("PerlinSpace: " + perlinSpace)
+        //         let display = [rX, 0, rZ];
+        //         //let perlinSpace = [dX, 0, dZ]
+        //         // console.log("\n\n****************\n\n" + i + ", " + j)
+        //         // console.log("Display: " + display);
+        //         // console.log("PerlinSpace: " + perlinSpace)
 
-                this._generateBlock(display, perlinSpace)
-            }
-        }
+        //         this._generateBlock(display, i, j)
+        //     }
+        // }
 
         // this._generateBlock([0, 0, .1], [0, 0, 0]);
         // this._generateBlock([domainSize, 0, .1], [BLOCK_DISPLAY_SIZE, 0, 0])
 
     }
 
-    _generateBlock(rangeOrigin, domainOrigin) {
-        let gridDomainArray;
-        var perlinMap;
+    _generateBlock(rangeOrigin, row, column) {
+
 
         let vertices = [];
 
@@ -58,18 +63,17 @@ class GridManager {
             vertices.push(r);
         }
 
-        let sFreq = 1;
-        let sAmp = 1;
+        let gridDomainArray;
+        let perlinMap;
+        let sAmp = 2;
+        let portion;
+        let domainOrigin;
 
         for (let currOctave = 0; currOctave < this.numOctaves; currOctave++) {
-            let portion = 1 / (Math.pow(2, this.numOctaves - currOctave - 1))
-            gridDomainArray = [this.blockDomainSize[0] * portion, this.blockDomainSize[1] * portion, this.blockDomainSize[2] * portion];
-            // console.log(rangeOrigin);
-            // console.log(this.blockDisplayDims);
-            // console.log(domainOrigin);
-            // console.log(gridDomainArray)
+            portion = 1 / (Math.pow(2, this.numOctaves - currOctave - 1))
+            gridDomainArray = [this.domainBlockSizeArr[0] * portion, this.domainBlockSizeArr[1] * portion, this.domainBlockSizeArr[2] * portion];
+            domainOrigin = [column * portion * this.domainBlockDim, 0, row * portion * this.domainBlockDim]
             perlinMap = this._generateMapping(rangeOrigin, this.blockDisplayDims, domainOrigin, gridDomainArray);
-            // console.log("\n\n***********\n\nOctave: " + currOctave + " | portion " + portion + " domain: " + gridDomainArray)
             for (let i = 0; i < this.numberOfSamples[0]; i++) {
                 for (let j = 0; j < this.numberOfSamples[2]; j++) {
                     let x = vertices[i][j][0];
@@ -78,11 +82,6 @@ class GridManager {
                     let mapped = perlinMap.map([x, .1, z]);
                     let v = sAmp * perlin.sample(mapped[0], mapped[1], mapped[2]);
                     vertices[i][j][1] += v;
-
-                    //console.log("x,z: (" + x + "," + z + ") -> (" + mapped[0] + ", " + mapped[2] + ") w/ value: " + v)
-                    // console.log("i, j: " + i + "," + j)
-                    // console.log("x,y,z: " + x, vertices[i][j][1], z);
-                    // console.log("Mapped: " + mapped[0], mapped[1], mapped[2])
                 }
             }
             sAmp *= .5;
@@ -91,8 +90,22 @@ class GridManager {
         this.terrainMeshes.push(new TerrainMesh(this.gl, vertices));
     }
 
-    getVisibleMeshes() {
-        // for now, all meshes
+    getVisibleMeshes(cameraPos, lookAt, viewAngle) {
+        this.terrainMeshes = [];
+        let x = Math.floor(Math.floor(cameraPos[0]) / BLOCK_DISPLAY_SIZE);
+        let z = Math.floor(Math.floor(cameraPos[2]) / BLOCK_DISPLAY_SIZE);
+
+        console.log(cameraPos)
+        console.log("Over block: ", x, z);
+
+        for (let i = z - RENDER_DISTANCE; i <= z + RENDER_DISTANCE; i++) {
+            for (let j = x - RENDER_DISTANCE; j <= x + RENDER_DISTANCE; j++) {
+                this._generateBlock([j * BLOCK_DISPLAY_SIZE, 0, i * BLOCK_DISPLAY_SIZE], i, j)
+
+            }
+        }
+
+
         return this.terrainMeshes;
     }
 
