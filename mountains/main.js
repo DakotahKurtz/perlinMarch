@@ -49,6 +49,11 @@ var cubeMaterials = materials(
 window.onload = () => {
     var canvas = document.getElementById("gl-canvas");
 
+
+
+
+
+
     var gl = WebGLUtils.setupWebGL(canvas);
     if (!gl) { alert("WebGL isn't available"); }
 

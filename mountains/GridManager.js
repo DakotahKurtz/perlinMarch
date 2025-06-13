@@ -8,12 +8,8 @@ class GridManager {
 
     constructor(gl, numOctaves) {
         this.gl = gl;
-        this.terrainMeshes = [];
-        let arr = new Array();
-        arr[0] = 4;
-        console.log(arr[0]);
-        arr[-1] = 3;
-        console.log(arr[-1])
+        this.terrainMeshes = new Map();
+
 
         numOctaves = 4;
 
@@ -25,25 +21,6 @@ class GridManager {
         this.zInc = this.blockDisplayDims[2] / (this.numberOfSamples[2] - 1);
         this.numOctaves = numOctaves;
 
-        // for (let i = 0; i < 30; i++) {
-        //     for (let j = 0; j < 30; j++) {
-        //         // let dX = j * this.domainBlockSize;
-        //         // let dZ = i * this.domainBlockSize;
-        //         let rX = j * BLOCK_DISPLAY_SIZE;
-        //         let rZ = i * BLOCK_DISPLAY_SIZE;
-
-        //         let display = [rX, 0, rZ];
-        //         //let perlinSpace = [dX, 0, dZ]
-        //         // console.log("\n\n****************\n\n" + i + ", " + j)
-        //         // console.log("Display: " + display);
-        //         // console.log("PerlinSpace: " + perlinSpace)
-
-        //         this._generateBlock(display, i, j)
-        //     }
-        // }
-
-        // this._generateBlock([0, 0, .1], [0, 0, 0]);
-        // this._generateBlock([domainSize, 0, .1], [BLOCK_DISPLAY_SIZE, 0, 0])
 
     }
 
@@ -87,11 +64,13 @@ class GridManager {
             sAmp *= .5;
         }
 
-        this.terrainMeshes.push(new TerrainMesh(this.gl, vertices));
+        return new TerrainMesh(this.gl, vertices);
     }
 
     getVisibleMeshes(cameraPos, lookAt, viewAngle) {
-        this.terrainMeshes = [];
+
+        let visible = [];
+
         let x = Math.floor(Math.floor(cameraPos[0]) / BLOCK_DISPLAY_SIZE);
         let z = Math.floor(Math.floor(cameraPos[2]) / BLOCK_DISPLAY_SIZE);
 
@@ -100,13 +79,19 @@ class GridManager {
 
         for (let i = z - RENDER_DISTANCE; i <= z + RENDER_DISTANCE; i++) {
             for (let j = x - RENDER_DISTANCE; j <= x + RENDER_DISTANCE; j++) {
-                this._generateBlock([j * BLOCK_DISPLAY_SIZE, 0, i * BLOCK_DISPLAY_SIZE], i, j)
+                if (this.terrainMeshes.has(i.toString() + j.toString())) {
+                    visible.push(this.terrainMeshes.get(i.toString() + j.toString()))
+                } else {
+                    let mesh = this._generateBlock([j * BLOCK_DISPLAY_SIZE, 0, i * BLOCK_DISPLAY_SIZE], i, j)
+                    visible.push(mesh);
+                    this.terrainMeshes.set(i.toString() + j.toString(), mesh);
+                }
 
             }
         }
 
 
-        return this.terrainMeshes;
+        return visible;
     }
 
     _generateMapping(dO, dDim, rO, rDim) {
