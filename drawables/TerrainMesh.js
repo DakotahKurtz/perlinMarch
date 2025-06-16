@@ -1,8 +1,14 @@
 class TerrainMesh {
-    constructor(gl, vertices) {
+    constructor(gl, vertices, defaultColor = [90 / 255, 120 / 255, 80 / 255, 1]) {
         this.gl = gl;
-        let points = [];
+        let squares = [];
         let normals = [];
+        let colors = [];
+
+
+        let steepColor = [180 / 255, 197 / 255, 209 / 255, 1];
+        let snowColor = [225 / 255, 230 / 255, 240 / 255, 1];
+
         for (let i = 0; i < vertices.length - 1; i++) {
             for (let j = 0; j < vertices[i].length - 1; j++) {
                 let p1 = vertices[i][j];
@@ -10,7 +16,7 @@ class TerrainMesh {
                 let p3 = vertices[i + 1][j + 1]
                 let p4 = vertices[i][j + 1];
 
-                points.push(p1, p2, p3, p1, p3, p4);
+                squares.push(p1, p2, p3, p1, p3, p4);
                 let n1 = calculateNormals(p1, p2, p3);
                 let n2 = calculateNormals(p1, p3, p4);
                 normals.push(
@@ -21,18 +27,49 @@ class TerrainMesh {
                     normalize(n2[1]),
                     normalize(n2[2])
                 )
+
+            }
+
+        }
+
+        const snowAltitude = 1.2;
+        const grassAltidude = .9;
+        let diff = subtractArr(snowColor, defaultColor);
+        const cDiff = [diff.x, diff.y, diff.z, 1];
+
+        var lerp = (v) => {
+            let prop = (v - grassAltidude) / (snowAltitude - grassAltidude);
+            let c = addVectors(defaultColor, scaleVector(cDiff, prop));
+            return [c[0], c[1], c[2], 1];
+        }
+
+        var getColor = (index) => {
+
+            if (squares[index][1] > snowAltitude) {
+                return snowColor;
+            }
+            if (squares[index][1] < grassAltidude) {
+                if (Math.abs(dot(normals[index], [0, 1, 0])) < .42) {
+                    return steepColor;
+                }
+                return defaultColor
+            }
+            else {
+                return lerp(squares[index][1])
             }
         }
 
-        let color = [.3, .5, .9, 1];
-        let colors = [];
-        for (let i = 0; i < points.length; i++) {
-            colors.push(color);
+        for (let i = 0; i < squares.length; i++) {
+            colors.push(getColor(i))
         }
 
-        this.numVertices = points.length;
 
-        this.vBuff = loadBuffer(this.gl, flatten(points), this.gl.STATIC_DRAW);
+
+
+
+        this.numVertices = squares.length;
+
+        this.vBuff = loadBuffer(this.gl, flatten(squares), this.gl.STATIC_DRAW);
         this.nBuff = loadBuffer(this.gl, flatten(normals), this.gl.STATIC_DRAW);
         this.cBuff = loadBuffer(this.gl, flatten(colors), this.gl.STATIC_DRAW);
     }

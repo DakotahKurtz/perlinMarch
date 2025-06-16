@@ -15,7 +15,7 @@ var z = 0.1;
 var dim = 3;
 const perlin = new Perlin2D();
 var numberOfSamples = 100;
-var threshold = .85;
+var threshold = .5;
 var displayDimension = 3;
 
 var depthChangeInc = .1
@@ -150,7 +150,7 @@ window.onload = () => {
 
 
         let sampleRange = [sampleSize, sampleSize, 0];
-        rOrigin[2] += .01;
+        //rOrigin[2] += .01;
 
         perlinMap = generateMap([0, 0, 0], [displayDimension, displayDimension, 1], rOrigin, sampleRange);
         numSamples[0] = numberOfSamples
@@ -158,7 +158,7 @@ window.onload = () => {
         // noiseDisplay = new NoiseDisplay(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold, true);
         marchingSquares = new MarchingSquares(gl, perlin, perlinMap.map, numSamples, displayDimension, threshold,);
 
-        animID = requestAnimationFrame(render);
+        // animID = requestAnimationFrame(render);
     }
 
 
@@ -188,7 +188,7 @@ window.onload = () => {
                 camera.setLocked(!camera.isLocked());
             }
 
-            var tInc = .01;
+            var tInc = .1;
 
             if (pressedKeys["t"]) {
                 switch (event.key) {
